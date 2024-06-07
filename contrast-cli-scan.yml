@@ -1,0 +1,49 @@
+parameters:
+  - name: fail_severity
+    default: critical
+  - name: project_name
+    default: $(Build.Repository.Name)
+  - name: scan_label
+    default: $(Build.BuildUri)
+
+stages:
+  - stage: Contrast_Scan
+    dependsOn: []
+    jobs:
+      - job: Contrast_Scan
+        steps:
+          - template: contrast-cli-setup.yml
+
+          - bash: |
+              zip -r src.zip . -x .git/\* #zip folder excluding .git contents
+              export FORCE_COLOR=0 #disable color output so extension output is rendered properly
+              contrast scan -f src.zip -n "$PROJECT_NAME" --label "$SCAN_LABEL" -s --fail --severity $FAIL_SEVERITY | tee $PIPELINE_WORKSPACE/contrast_scan.md
+              case ${PIPESTATUS[0]} in
+              "0")
+                echo "Contrast Scan passed"
+                echo "##vso[task.complete result=Succeeded;]"
+                ;;
+
+              "2")
+                echo "##vso[task.logissue type=warning;]Contrast Scan contained critical vulnerabilities!"
+                echo "##vso[task.complete result=SucceededWithIssues;]"
+                ;;
+
+              *)
+                echo "##vso[task.logissue type=error;]Contrast Scan failed!"
+                echo "##vso[task.complete result=Failed;]"
+                ;;
+              esac
+              echo "##vso[task.uploadsummary]$PIPELINE_WORKSPACE/contrast_scan.md"
+            displayName: Run Contrast Scan
+            env:
+              FAIL_SEVERITY: ${{ parameters.fail_severity }}
+              PROJECT_NAME: ${{ parameters.project_name }}
+              SCAN_LABEL: ${{ parameters.scan_label }}
+
+          - task: PublishPipelineArtifact@1
+            inputs:
+              targetPath: "results.sarif"
+              publishLocation: "pipeline"
+            displayName: Upload SARIF
+            condition: always()

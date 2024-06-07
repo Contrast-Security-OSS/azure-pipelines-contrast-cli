@@ -1,0 +1,46 @@
+parameters:
+  - name: fail_severity
+    default: critical
+  - name: project_name
+    default: $(Build.Repository.Name)
+
+stages:
+  - stage: Contrast_Audit
+    dependsOn: []
+    jobs:
+      - job: Contrast_Audit
+        steps:
+          - template: contrast-cli-setup.yml
+
+          - bash: |
+              export FORCE_COLOR=0 #disable color output so extension output is rendered properly
+              contrast audit -f . --track --name "$PROJECT_NAME" --save --fail --severity $FAIL_SEVERITY |  tee $PIPELINE_WORKSPACE/contrast_audit.md
+              case ${PIPESTATUS[0]} in
+              "0")
+                echo "Contrast Audit passed"
+                echo "##vso[task.complete result=Succeeded;]"
+                ;;
+
+              "2")
+                echo "##vso[task.logissue type=warning;]Contrast Audit contained critical vulnerabilities!"
+                echo "##vso[task.complete result=SucceededWithIssues;]"
+                ;;
+
+              *)
+                echo "##vso[task.logissue type=error;]Contrast Audit failed!"
+                echo "##vso[task.complete result=Failed;]"
+                ;;
+              esac
+              echo "##vso[task.uploadsummary]$PIPELINE_WORKSPACE/contrast_audit.md"
+              mv *-sbom-CYCLONEDX.json sbom-CYCLONEDX.json
+            displayName: Run Contrast Audit
+            env:
+              FAIL_SEVERITY: ${{ parameters.fail_severity }}
+              PROJECT_NAME: ${{ parameters.project_name }}
+
+          - task: PublishPipelineArtifact@1
+            inputs:
+              targetPath: "sbom-CYCLONEDX.json"
+              publishLocation: "pipeline"
+            displayName: Upload SBOM
+            condition: always()

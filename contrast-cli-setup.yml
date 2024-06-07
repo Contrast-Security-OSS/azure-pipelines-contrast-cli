@@ -1,0 +1,45 @@
+parameters:
+  - name: contrast_cache
+    default: $(Pipeline.Workspace)/.contrast
+  - name: contrast_org
+    default: TODO_ORG_ID_HERE
+  - name: contrast_url
+    default: TODO_CONTRAST_URL_HERE #e.g. https://app.contrastsecurity.com
+  - name: azure_subscription
+    default: TODO_AZURE_SUBSCRIPTION_HERE #e.g. Subscription Name(subscription_id)
+  - name: key_vault
+    default: TODO_AZURE_KEY_VAULT_NAME
+
+steps:
+  - task: Cache@2
+    inputs:
+      key: 'contrast | "$(Agent.OS)"'
+      restoreKeys: |
+        contrast | "$(Agent.OS)"
+      path: ${{ parameters.contrast_cache }}
+    displayName: Cache Contrast CLI
+
+  - bash: |
+      mkdir -p $contrast_cache
+      curl -z $contrast_cache/contrast -Lo $contrast_cache/contrast https://pkg.contrastsecurity.com/artifactory/cli/v2/latest/linux/contrast && chmod +x $contrast_cache/contrast
+    displayName: Download Contrast CLI
+    env:
+      contrast_cache: ${{ parameters.contrast_cache }}
+
+  - task: AzureKeyVault@2
+    inputs:
+      azureSubscription: ${{ parameters.azure_subscription }}
+      KeyVaultName: ${{ parameters.key_vault }}
+      SecretsFilter: "contrastCLI-apiKey,contrastCLI-auth"
+      RunAsPreJob: false
+
+  - bash: |
+      $contrast_cache/contrast auth --api-key $CONTRAST_API_KEY --authorization $CONTRAST_AUTH --organization-id $CONTRAST_ORG_ID --host $CONTRAST_URL
+      echo "##vso[task.prependpath]$contrast_cache"
+    displayName: Contrast CLI Login
+    env:
+      contrast_cache: ${{ parameters.contrast_cache }}
+      CONTRAST_API_KEY: $(contrastCLI-apiKey)
+      CONTRAST_AUTH: $(contrastCLI-auth)
+      CONTRAST_ORG_ID: ${{ parameters.contrast_org }}
+      CONTRAST_URL: ${{ parameters.contrast_url }}
