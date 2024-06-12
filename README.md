@@ -59,3 +59,13 @@ stages:
   #   fail_severity: high
   #   project_name: my_overridden_project_name
 ```
+
+# Screenshots
+Azure Pipeline summary of Contrast CLI jobs:
+<img width="1051" alt="Azure Pipeline summary of Contrast CLI jobs" src="https://github.com/Contrast-Security-OSS/azure-pipelines-contrast-cli/assets/431228/28255fd9-3977-490c-ba0e-0dfdaa026e42">
+Azure Pipeline Extensions tab showing Contrast CLI output:
+<img width="1075" alt="Azure Pipeline Extensions tab showing Contrast CLI output" src="https://github.com/Contrast-Security-OSS/azure-pipelines-contrast-cli/assets/431228/e3fa837f-7449-450e-b8e7-4a7f6e38f674">
+Azure Pipeline job run showing Contrast Scan and Contrast Audit steps:
+<img width="1106" alt="Azure Pipeline job run showing Contrast Scan and Contrast Audit steps" src="https://github.com/Contrast-Security-OSS/azure-pipelines-contrast-cli/assets/431228/44340a99-9e60-4294-a193-fc12c57525dd">
+
+
